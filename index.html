@@ -805,11 +805,40 @@
     async function toggleSetting(path, el) {
       el.classList.toggle('on');
       const value = el.classList.contains('on');
-      // Would save to backend here
+      // Update nested settings
+      const parts = path.split('.');
+      let obj = settings;
+      for (let i = 0; i < parts.length - 1; i++) {
+        obj = obj[parts[i]];
+      }
+      obj[parts[parts.length - 1]] = value;
+      
+      // Save to backend
+      try {
+        await fetch(API + '/settings', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(settings)
+        });
+      } catch (e) { console.error(e); }
     }
     
     async function updateSetting(path, value) {
-      // Would save to backend here
+      const parts = path.split('.');
+      let obj = settings;
+      for (let i = 0; i < parts.length - 1; i++) {
+        obj = obj[parts[i]];
+      }
+      obj[parts[parts.length - 1]] = value;
+      
+      // Save to backend
+      try {
+        await fetch(API + '/settings', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(settings)
+        });
+      } catch (e) { console.error(e); }
     }
     
     // Add Task Modal
