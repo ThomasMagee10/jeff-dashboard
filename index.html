@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeff Manager Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      padding: 40px;
+      min-height: 100vh;
+    }
+    h1 { color: #58a6ff; margin-bottom: 10px; }
+    h2 { color: #8b949e; font-size: 18px; margin-bottom: 30px; }
+    
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .panel h3 { 
+      color: #e6edf3; 
+      font-size: 18px; 
+      margin-bottom: 15px; 
+    }
+    
+    .info-box {
+      background: #1f6feb;
+      border: 1px solid #388bfd;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .info-box h3 { color: white; margin-bottom: 10px; }
+    .info-box code { background: #0d1117; padding: 4px 8px; border-radius: 4px; }
+    
+    .template-item {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .template-name { color: #58a6ff; font-weight: bold; }
+    .template-meta { color: #8b949e; font-size: 14px; margin-top: 5px; }
+    
+    .btn {
+      display: inline-block;
+      background: #238636;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ Jeff Manager</h1>
+  <h2>Multi-Bot Orchestration Dashboard</h2>
+  
+  <div class="info-box">
+    <h3>🔌 Connect to Jeff</h3>
+    <p>This dashboard requires a connection to the Jeff backend running on the Mac mini.</p>
+    <p style="margin-top: 15px;">Access locally: <code>http://192.168.5.157:18790</code></p>
+    <p style="margin-top: 10px; font-size: 14px; color: #8b949e;">(Must be on the same network as the Mac mini)</p>
+  </div>
+  
+  <div class="panel">
+    <h3>📋 Bot Templates</h3>
+    
+    <div class="template-item">
+      <div class="template-name">⚡ Light</div>
+      <div class="template-meta">MiniMax M2.1 • 4,000 tokens • 60s timeout</div>
+    </div>
+    
+    <div class="template-item">
+      <div class="template-name">💪 Medium</div>
+      <div class="template-meta">MiniMax M2.1 • 10,000 tokens • 180s timeout</div>
+    </div>
+    
+    <div class="template-item">
+      <div class="template-name">🧠 Heavy</div>
+      <div class="template-meta">MiniMax M2.5 • 20,000 tokens • 300s timeout</div>
+    </div>
+  </div>
+  
+  <div class="panel">
+    <h3>⚙️ System Info</h3>
+    <p style="color: #8b949e; margin-bottom: 8px;">Gateway: OpenClaw 2026.2.17</p>
+    <p style="color: #8b949e; margin-bottom: 8px;">Model: Claude Sonnet (via Pro subscription)</p>
+    <p style="color: #8b949e;">Channels: Telegram, Web</p>
+  </div>
+</body>
+</html>
