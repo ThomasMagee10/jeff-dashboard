@@ -6,20 +6,19 @@ const path = require('path');
 
 const PORT = process.env.PORT || 18790;
 
-// In-memory storage (works on Render)
-let data = {
-  templates: {
-    light: { name: "Light", description: "Quick tasks", model: "MiniMax M2.1", maxTokens: 4000, timeoutSeconds: 60, color: "#238636" },
-    medium: { name: "Medium", description: "Research & multi-step", model: "MiniMax M2.1", maxTokens: 10000, timeoutSeconds: 180, color: "#d29922" },
-    heavy: { name: "Heavy", description: "Complex reasoning", model: "MiniMax M2.5", maxTokens: 20000, timeoutSeconds: 300, color: "#da3633" },
-    claude: { name: "Claude", description: "Premium AI assistant", model: "Claude 3.5 Sonnet", maxTokens: 50000, timeoutSeconds: 600, color: "#a371f7" }
-  },
-  tasks: [],
-  stats: { totalTasks: 0, completedTasks: 0 }
-};
+// Load data
+let data = require('./jeff-manager.json');
+
+function saveData() {
+  fs.writeFileSync('./jeff-manager.json', JSON.stringify(data, null, 2));
+}
 
 function generateId() {
   return 'task-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+function generateBotId() {
+  return 'bot-' + Math.random().toString(36).substr(2, 6);
 }
 
 const server = http.createServer((req, res) => {
@@ -33,57 +32,167 @@ const server = http.createServer((req, res) => {
     return;
   }
   
+  const url = req.url.split('?')[0];
+  
   // API Routes
-  if (req.url === '/api/config') {
+  if (url === '/api/config' && req.method === 'GET') {
     res.writeHead(200, {'Content-Type': 'application/json'});
     res.end(JSON.stringify(data));
     return;
   }
   
-  if (req.url === '/api/tasks' && req.method === 'GET') {
+  if (url === '/api/settings' && req.method === 'GET') {
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(data.tasks));
+    res.end(JSON.stringify(data.settings));
     return;
   }
   
-  if (req.url === '/api/tasks' && req.method === 'POST') {
+  if (url === '/api/settings' && req.method === 'PUT') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      data.settings = JSON.parse(body);
+      saveData();
+      res.writeHead(200, {'Content-Type': 'application/json'});
+      res.end(JSON.stringify(data.settings));
+    });
+    return;
+  }
+  
+  if (url === '/api/tasks' && req.method === 'GET') {
+    const status = new URL(req.url, 'http://localhost').searchParams.get('status');
+    let tasks = data.tasks;
+    if (status) {
+      tasks = tasks.filter(t => t.status === status);
+    }
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify(tasks));
+    return;
+  }
+  
+  if (url === '/api/tasks' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       const taskData = JSON.parse(body);
       const task = {
         id: generateId(),
-        title: taskData.title || 'Untitled Task',
+        title: taskData.title || 'Untitled',
         description: taskData.description || '',
+        acceptanceCriteria: taskData.acceptanceCriteria || '',
         status: taskData.status || 'todo',
+        priority: taskData.priority || 'medium',
         template: taskData.template || 'medium',
-        botName: taskData.botName || null,
-        assignedAt: null,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        bot: null,
+        activity: [{"timestamp": new Date().toISOString(), "action": "Created", "details": "Task created"}]
       };
       data.tasks.unshift(task);
       data.stats.totalTasks = (data.stats.totalTasks || 0) + 1;
+      saveData();
       res.writeHead(200, {'Content-Type': 'application/json'});
       res.end(JSON.stringify(task));
     });
     return;
   }
   
-  if (req.url.startsWith('/api/tasks/') && req.method === 'PUT') {
-    const taskId = req.url.split('/').slice(-1)[0];
+  if (url.match(/^\/api\/tasks\/[\w-]+$/) && req.method === 'GET') {
+    const taskId = url.split('/').pop();
+    const task = data.tasks.find(t => t.id === taskId);
+    if (task) {
+      res.writeHead(200, {'Content-Type': 'application/json'});
+      res.end(JSON.stringify(task));
+    } else {
+      res.writeHead(404, {'Content-Type': 'application/json'});
+      res.end(JSON.stringify({error: 'Not found'}));
+    }
+    return;
+  }
+  
+  if (url.match(/^\/api\/tasks\/[\w-]+$/) && req.method === 'PUT') {
+    const taskId = url.split('/').pop();
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       const updates = JSON.parse(body);
       const taskIndex = data.tasks.findIndex(t => t.id === taskId);
+      
       if (taskIndex !== -1) {
-        data.tasks[taskIndex] = { ...data.tasks[taskIndex], ...updates, updatedAt: new Date().toISOString() };
-        if (updates.status === 'completed' && data.tasks[taskIndex].status !== 'completed') {
-          data.stats.completedTasks = (data.stats.completedTasks || 0) + 1;
+        const oldStatus = data.tasks[taskIndex].status;
+        data.tasks[taskIndex] = {
+          ...data.tasks[taskIndex],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Log activity
+        if (updates.status && updates.status !== oldStatus) {
+          data.tasks[taskIndex].activity.push({
+            "timestamp": new Date().toISOString(),
+            "action": "Status changed",
+            "details": `${oldStatus} → ${updates.status}`
+          });
         }
+        
+        if (updates.blockReason) {
+          data.tasks[taskIndex].activity.push({
+            "timestamp": new Date().toISOString(),
+            "action": "Blocked",
+            "details": updates.blockReason
+          });
+        }
+        
+        if (updates.status === 'completed') {
+          data.stats.completedTasks = (data.stats.completedTasks || 0) + 1;
+          if (data.tasks[taskIndex].bot) {
+            data.tasks[taskIndex].bot.status = 'completed';
+          }
+        }
+        
+        saveData();
         res.writeHead(200, {'Content-Type': 'application/json'});
         res.end(JSON.stringify(data.tasks[taskIndex]));
+      } else {
+        res.writeHead(404, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({error: 'Not found'}));
+      }
+    });
+    return;
+  }
+  
+  if (url.match(/^\/api\/tasks\/[\w-]+\/bot$/) && req.method === 'POST') {
+    const taskId = url.split('/')[2];
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      const botData = JSON.parse(body);
+      const taskIndex = data.tasks.findIndex(t => t.id === taskId);
+      
+      if (taskIndex !== -1) {
+        const template = data.templates[botData.template] || data.templates.medium;
+        const bot = {
+          name: botData.name || generateBotId(),
+          status: 'running',
+          model: template.model,
+          startedAt: new Date().toISOString(),
+          lastHeartbeatAt: new Date().toISOString(),
+          currentStep: 'Initializing...',
+          budgetUsed: {tokens: 0, calls: 0},
+          budgetLimit: {tokens: template.maxTokens, calls: 50}
+        };
+        
+        data.tasks[taskIndex].bot = bot;
+        data.tasks[taskIndex].status = 'progress';
+        data.tasks[taskIndex].activity.push({
+          "timestamp": new Date().toISOString(),
+          "action": "Bot spawned",
+          "details": `${bot.name} started on ${template.model}`
+        });
+        
+        saveData();
+        res.writeHead(200, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify(bot));
       } else {
         res.writeHead(404, {'Content-Type': 'application/json'});
         res.end(JSON.stringify({error: 'Task not found'}));
@@ -92,25 +201,59 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  if (req.url.startsWith('/api/tasks/') && req.method === 'DELETE') {
-    const taskId = req.url.split('/').slice(-1)[0];
+  if (url.match(/^\/api\/tasks\/[\w-]+\/activity$/) && req.method === 'POST') {
+    const taskId = url.split('/')[2];
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      const activity = JSON.parse(body);
+      const taskIndex = data.tasks.findIndex(t => t.id === taskId);
+      
+      if (taskIndex !== -1) {
+        data.tasks[taskIndex].activity.push({
+          "timestamp": new Date().toISOString(),
+          "action": activity.action,
+          "details": activity.details
+        });
+        
+        if (activity.heartbeat) {
+          data.tasks[taskIndex].bot.lastHeartbeatAt = new Date().toISOString();
+          data.tasks[taskIndex].bot.currentStep = activity.details;
+          data.tasks[taskIndex].bot.budgetUsed = activity.budgetUsed || data.tasks[taskIndex].bot.budgetUsed;
+        }
+        
+        saveData();
+        res.writeHead(200, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({success: true}));
+      } else {
+        res.writeHead(404, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({error: 'Task not found'}));
+      }
+    });
+    return;
+  }
+  
+  if (url.match(/^\/api\/tasks\/[\w-]+$/) && req.method === 'DELETE') {
+    const taskId = url.split('/').pop();
     const taskIndex = data.tasks.findIndex(t => t.id === taskId);
+    
     if (taskIndex !== -1) {
       data.tasks.splice(taskIndex, 1);
+      saveData();
       res.writeHead(200, {'Content-Type': 'application/json'});
       res.end(JSON.stringify({success: true}));
     } else {
       res.writeHead(404, {'Content-Type': 'application/json'});
-      res.end(JSON.stringify({error: 'Task not found'}));
+      res.end(JSON.stringify({error: 'Not found'}));
     }
     return;
   }
   
   // Serve static files
-  let filePath = req.url === '/' ? '/index.html' : req.url;
+  let filePath = url === '/' ? '/index.html' : url;
   const fullPath = path.join(__dirname, filePath);
   const ext = path.extname(fullPath);
-  const contentTypes = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
+  const contentTypes = {'.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.md': 'text/markdown'};
   
   fs.readFile(fullPath, (err, content) => {
     if (err) {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jeff Manager - Kanban Board</title>
+  <title>Jeff Manager - Workload Dashboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -17,110 +17,376 @@
       --success: #238636;
       --warning: #d29922;
       --danger: #da3633;
+      --purple: #a371f7;
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-dark);
       color: var(--text);
       min-height: 100vh;
-      padding: 20px;
+      overflow-x: hidden;
     }
+    
+    /* Header */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
+      padding: 15px 25px;
       border-bottom: 1px solid var(--border);
+      background: var(--bg-card);
     }
-    h1 { color: var(--accent); font-size: 28px; }
-    .add-btn {
-      background: var(--accent);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: bold;
+    header h1 { font-size: 20px; }
+    header h1 span { color: var(--text-muted); font-weight: normal; }
+    .header-btns { display: flex; gap: 10px; }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-dark);
+      color: var(--text);
       cursor: pointer;
+      font-size: 13px;
     }
-    .kanban {
+    .btn:hover { background: var(--bg-column); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+    .btn-primary:hover { opacity: 0.9; }
+    
+    /* Kanban Board */
+    .board {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
+      gap: 15px;
+      padding: 20px;
+      min-height: calc(100vh - 200px);
     }
     .column {
       background: var(--bg-column);
-      border-radius: 12px;
-      padding: 15px;
-      min-height: 400px;
+      border-radius: 10px;
+      padding: 12px;
+      min-height: 300px;
     }
     .column-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
     }
-    .column-title { font-weight: bold; font-size: 14px; text-transform: uppercase; }
+    .column-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     .col-todo .column-title { color: var(--accent); }
     .col-progress .column-title { color: var(--warning); }
     .col-blocked .column-title { color: var(--danger); }
     .col-completed .column-title { color: var(--success); }
     .task-count {
       background: var(--bg-dark);
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
     }
-    .tasks-list { display: flex; flex-direction: column; gap: 10px; }
+    
+    /* Task Cards */
     .task-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .task-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .task-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .task-title { font-weight: 600; font-size: 14px; }
+    .priority {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .priority-high { background: var(--danger); color: white; }
+    .priority-medium { background: var(--warning); color: black; }
+    .priority-low { background: var(--bg-dark); color: var(--text-muted); }
+    .task-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    /* Bot Panel */
+    .bot-panel {
+      background: var(--bg-dark);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 11px;
+    }
+    .bot-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .bot-name { font-weight: 600; color: var(--purple); }
+    .bot-status {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .bot-status.running { background: var(--success); color: white; }
+    .bot-status.paused { background: var(--warning); color: black; }
+    .bot-status.completed { background: var(--text-muted); color: white; }
+    .bot-info { color: var(--text-muted); }
+    .bot-step { color: var(--text-muted); font-style: italic; margin-top: 4px; }
+    .bot-budget { display: flex; gap: 10px; margin-top: 6px; }
+    .bot-budget span { color: var(--text-muted); }
+    
+    /* No Bot */
+    .no-bot {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 8px;
+      background: var(--bg-dark);
+      border-radius: 6px;
+    }
+    
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .quick-btn {
+      font-size: 10px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
       cursor: pointer;
     }
-    .task-title { font-weight: bold; margin-bottom: 6px; }
-    .task-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
-    .task-meta { font-size: 11px; color: var(--text-muted); }
+    .quick-btn:hover { color: var(--text); }
+    .quick-btn.spawn { color: var(--success); }
+    .quick-btn.pause { color: var(--warning); }
+    .quick-btn.block { color: var(--danger); }
     
-    /* Modal */
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
-    .modal.show { display: flex; }
-    .modal-content {
+    /* Drawer */
+    .drawer-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: -500px;
+      width: 480px;
+      max-width: 90vw;
+      height: 100vh;
+      background: var(--bg-card);
+      border-left: 1px solid var(--border);
+      z-index: 101;
+      transition: right 0.3s;
+      overflow-y: auto;
+    }
+    .drawer-overlay.open .drawer { right: 0; }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-header h2 { font-size: 18px; }
+    .drawer-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .drawer-content { padding: 20px; }
+    .drawer-section { margin-bottom: 25px; }
+    .drawer-section h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Activity Log */
+    .activity-log { max-height: 200px; overflow-y: auto; }
+    .activity-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .activity-time { color: var(--text-muted); min-width: 60px; }
+    .activity-action { font-weight: 600; }
+    .activity-details { color: var(--text-muted); }
+    
+    /* Settings Panel */
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+    }
+    .settings-overlay.open { display: flex; align-items: center; justify-content: center; }
+    .settings-panel {
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 30px;
-      width: 400px;
+      width: 700px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .modal h2 { margin-bottom: 20px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); }
-    .form-group input, .form-group textarea, .form-group select {
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-header h2 { font-size: 18px; }
+    .settings-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .settings-tabs {
+      width: 180px;
+      background: var(--bg-column);
+      padding: 15px;
+      border-right: 1px solid var(--border);
+    }
+    .settings-tab {
+      display: block;
+      padding: 10px 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .settings-tab:hover, .settings-tab.active { background: var(--bg-dark); color: var(--text); }
+    .settings-content {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .settings-section { margin-bottom: 25px; }
+    .settings-section h4 { font-size: 14px; margin-bottom: 12px; }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-label { font-size: 13px; }
+    .setting-desc { font-size: 11px; color: var(--text-muted); }
+    
+    /* Toggle Switch */
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--bg-dark);
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: var(--success); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 23px; }
+    
+    /* Form Elements */
+    input, textarea, select {
       width: 100%;
       background: var(--bg-dark);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 10px;
       border-radius: 6px;
+      font-size: 13px;
     }
-    .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-    .btn-cancel { background: var(--bg-dark); color: var(--text); border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-    .btn-submit { background: var(--accent); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
     
-    .empty { text-align: center; color: var(--text-muted); padding: 30px; }
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 150;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 25px;
+      width: 450px;
+    }
+    .modal h3 { margin-bottom: 15px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    
+    .empty-col { text-align: center; color: var(--text-muted); padding: 30px; font-size: 13px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Jeff Manager / Kanban</h1>
-    <button class="add-btn" id="addBtn">+ Add Task</button>
+    <h1>Jeff Manager <span>/ Workload Dashboard</span></h1>
+    <div class="header-btns">
+      <button class="btn" id="settingsBtn">⚙️ Settings</button>
+      <button class="btn btn-primary" id="addTaskBtn">+ Add Task</button>
+    </div>
   </header>
   
-  <div class="kanban">
+  <div class="board">
     <div class="column col-todo">
       <div class="column-header">
         <span class="column-title">To Do</span>
@@ -154,10 +420,42 @@
     </div>
   </div>
   
-  <!-- Modal -->
-  <div class="modal" id="taskModal">
-    <div class="modal-content">
-      <h2>Add New Task</h2>
+  <!-- Task Drawer -->
+  <div class="drawer-overlay" id="drawer">
+    <div class="drawer">
+      <div class="drawer-header">
+        <h2 id="drawerTitle">Task Details</h2>
+        <button class="drawer-close" id="drawerClose">×</button>
+      </div>
+      <div class="drawer-content" id="drawerContent"></div>
+    </div>
+  </div>
+  
+  <!-- Settings Panel -->
+  <div class="settings-overlay" id="settings">
+    <div class="settings-panel">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <button class="drawer-close" id="settingsClose">×</button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-tabs">
+          <a class="settings-tab active" data-tab="manager">Manager Mode</a>
+          <a class="settings-tab" data-tab="spawning">Spawning</a>
+          <a class="settings-tab" data-tab="approvals">Approvals</a>
+          <a class="settings-tab" data-tab="integrations">Integrations</a>
+          <a class="settings-tab" data-tab="notifications">Notifications</a>
+          <a class="settings-tab" data-tab="board">Board Prefs</a>
+        </div>
+        <div class="settings-content" id="settingsContent"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Add Task Modal -->
+  <div class="modal-overlay" id="taskModal">
+    <div class="modal">
+      <h3>Add New Task</h3>
       <form id="taskForm">
         <div class="form-group">
           <label>Title</label>
@@ -165,20 +463,32 @@
         </div>
         <div class="form-group">
           <label>Description</label>
-          <textarea id="taskDesc"></textarea>
+          <textarea id="taskDesc" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Acceptance Criteria</label>
+          <textarea id="taskCriteria" rows="3" placeholder="What needs to be done?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="taskPriority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Template</label>
           <select id="taskTemplate">
-            <option value="light">Light (4k tokens, 60s)</option>
-            <option value="medium" selected>Medium (10k tokens, 180s)</option>
-            <option value="heavy">Heavy (20k tokens, 300s)</option>
-            <option value="claude">Claude (50k tokens, 600s)</option>
+            <option value="light">Light (4k tokens)</option>
+            <option value="medium" selected>Medium (10k tokens)</option>
+            <option value="heavy">Heavy (20k tokens)</option>
+            <option value="claude">Claude (50k tokens)</option>
           </select>
         </div>
-        <div class="modal-btns">
-          <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
-          <button type="submit" class="btn-submit">Create</button>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="cancelTaskBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Task</button>
         </div>
       </form>
     </div>
@@ -188,17 +498,20 @@
     const API = 'https://jeff-manager.onrender.com/api';
     let tasks = [];
     let templates = {};
+    let settings = {};
+    let currentTask = null;
     
     // Load data
     async function loadData() {
       try {
         const res = await fetch(API + '/config');
         const data = await res.json();
-        templates = data.templates || {};
         tasks = data.tasks || [];
+        templates = data.templates || {};
+        settings = data.settings || {};
         render();
       } catch (e) {
-        console.error('Error loading:', e);
+        console.error('Load error:', e);
       }
     }
     
@@ -220,14 +533,52 @@
         const t = templates[task.template] || {};
         const div = document.createElement('div');
         div.className = 'task-card';
+        div.onclick = () => openDrawer(task);
+        
+        let botHtml = '';
+        if (task.bot) {
+          const budgetPct = Math.round((task.bot.budgetUsed?.tokens || 0) / (task.bot.budgetLimit?.tokens || 1) * 100);
+          botHtml = `
+            <div class="bot-panel">
+              <div class="bot-header">
+                <span class="bot-name">🤖 ${task.bot.name}</span>
+                <span class="bot-status ${task.bot.status}">${task.bot.status}</span>
+              </div>
+              <div class="bot-info">${task.bot.model} • ${task.bot.budgetUsed?.tokens || 0}/${task.bot.budgetLimit?.tokens || 0} tokens</div>
+              <div class="bot-step">${task.bot.currentStep || 'Starting...'}</div>
+              <div class="bot-budget">
+                <span>🗓️ ${task.bot.startedAt ? new Date(task.bot.startedAt).toLocaleTimeString() : '-'}</span>
+                <span>💓 ${task.bot.lastHeartbeatAt ? new Date(task.bot.lastHeartbeatAt).toLocaleTimeString() : '-'}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          botHtml = '<div class="no-bot">No bot assigned</div>';
+        }
+        
         div.innerHTML = `
-          <div class="task-title">${task.title}</div>
+          <div class="task-header">
+            <span class="task-title">${task.title}</span>
+            <span class="priority priority-${task.priority}">${task.priority}</span>
+          </div>
           <div class="task-desc">${task.description || ''}</div>
-          <div class="task-meta">${t.model || ''} • ${t.timeoutSeconds || 0}s</div>
+          ${botHtml}
+          <div class="quick-actions">
+            ${!task.bot ? `<button class="quick-btn spawn" onclick="event.stopPropagation();spawnBot('${task.id}')">🤖 Spawn</button>` : ''}
+            ${task.bot?.status === 'running' ? `<button class="quick-btn pause" onclick="event.stopPropagation();pauseBot('${task.id}')">⏸️ Pause</button>` : ''}
+            ${task.bot?.status === 'paused' ? `<button class="quick-btn" onclick="event.stopPropagation();resumeBot('${task.id}')">▶️ Resume</button>` : ''}
+            <button class="quick-btn block" onclick="event.stopPropagation();blockTask('${task.id}')">🚫 Block</button>
+          </div>
         `;
-        div.onclick = () => moveTask(task.id, status);
         
         if (lists[status]) lists[status].appendChild(div);
+      });
+      
+      // Empty states
+      Object.keys(lists).forEach(k => {
+        if (!lists[k].children.length) {
+          lists[k].innerHTML = '<div class="empty-col">No tasks</div>';
+        }
       });
       
       document.getElementById('todoCount').textContent = counts.todo;
@@ -236,49 +587,267 @@
       document.getElementById('completedCount').textContent = counts.completed;
     }
     
-    async function moveTask(id, currentStatus) {
-      const statuses = ['todo', 'progress', 'blocked', 'completed'];
-      const currentIdx = statuses.indexOf(currentStatus);
-      const nextStatus = statuses[(currentIdx + 1) % statuses.length];
+    // Drawer
+    function openDrawer(task) {
+      currentTask = task;
+      document.getElementById('drawerTitle').textContent = task.title;
       
-      try {
-        await fetch(API + '/tasks/' + id, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({status: nextStatus})
-        });
-        loadData();
-      } catch (e) {
-        console.error('Error:', e);
-      }
+      const t = templates[task.template] || {};
+      let activityHtml = (task.activity || []).slice().reverse().map(a => `
+        <div class="activity-item">
+          <span class="activity-time">${new Date(a.timestamp).toLocaleTimeString()}</span>
+          <span class="activity-action">${a.action}</span>
+          <span class="activity-details">${a.details}</span>
+        </div>
+      `).join('');
+      
+      document.getElementById('drawerContent').innerHTML = `
+        <div class="drawer-section">
+          <h3>Description</h3>
+          <p style="font-size:13px;line-height:1.5">${task.description || 'No description'}</p>
+        </div>
+        
+        <div class="drawer-section">
+          <h3>Acceptance Criteria</h3>
+          <pre style="font-size:12px;white-space:pre-wrap">${task.acceptanceCriteria || 'None'}</pre>
+        </div>
+        
+        <div class="drawer-section">
+          <h3>Bot Details</h3>
+          ${task.bot ? `
+            <div style="background:var(--bg-dark);padding:12px;border-radius:8px">
+              <div style="margin-bottom:8px"><strong>Name:</strong> ${task.bot.name}</div>
+              <div style="margin-bottom:8px"><strong>Model:</strong> ${task.bot.model}</div>
+              <div style="margin-bottom:8px"><strong>Status:</strong> ${task.bot.status}</div>
+              <div style="margin-bottom:8px"><strong>Step:</strong> ${task.bot.currentStep}</div>
+              <div><strong>Budget:</strong> ${task.bot.budgetUsed?.tokens || 0}/${task.bot.budgetLimit?.tokens || 0} tokens</div>
+            </div>
+          ` : '<div class="no-bot">No bot assigned</div>'}
+        </div>
+        
+        <div class="drawer-section">
+          <h3>Activity Log</h3>
+          <div class="activity-log">${activityHtml || 'No activity'}</div>
+        </div>
+        
+        <div class="drawer-section">
+          <h3>Actions</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${!task.bot ? `<button class="btn" onclick="spawnBot('${task.id}')">🤖 Spawn Bot</button>` : ''}
+            ${task.bot?.status === 'running' ? `<button class="btn" onclick="pauseBot('${task.id}')">⏸️ Pause</button>` : ''}
+            ${task.bot?.status === 'paused' ? `<button class="btn" onclick="resumeBot('${task.id}')">▶️ Resume</button>` : ''}
+            ${task.bot ? `<button class="btn" onclick="killBot('${task.id}')">💀 Kill Bot</button>` : ''}
+            <button class="btn" onclick="blockTask('${task.id}')">🚫 Block</button>
+            <button class="btn" onclick="completeTask('${task.id}')">✅ Complete</button>
+            <button class="btn" style="color:var(--danger)" onclick="deleteTask('${task.id}')">🗑️ Delete</button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('drawer').classList.add('open');
     }
     
-    // Modal
-    const modal = document.getElementById('taskModal');
-    document.getElementById('addBtn').onclick = () => modal.classList.add('show');
-    document.getElementById('cancelBtn').onclick = () => modal.classList.remove('show');
+    document.getElementById('drawerClose').onclick = () => document.getElementById('drawer').classList.remove('open');
+    document.getElementById('drawer').onclick = (e) => {
+      if (e.target.id === 'drawer') document.getElementById('drawer').classList.remove('open');
+    };
     
-    // Submit
+    // Task Actions
+    async function spawnBot(taskId) {
+      try {
+        await fetch(API + '/tasks/' + taskId + '/bot', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({template: 'medium'})
+        });
+        loadData();
+        if (currentTask?.id === taskId) openDrawer(tasks.find(t => t.id === taskId));
+      } catch (e) { console.error(e); }
+    }
+    
+    async function pauseBot(taskId) {
+      try {
+        await fetch(API + '/tasks/' + taskId, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({bot: {status: 'paused'}})
+        });
+        loadData();
+        if (currentTask?.id === taskId) openDrawer(tasks.find(t => t.id === taskId));
+      } catch (e) { console.error(e); }
+    }
+    
+    async function resumeBot(taskId) {
+      try {
+        await fetch(API + '/tasks/' + taskId, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({bot: {status: 'running'}})
+        });
+        loadData();
+        if (currentTask?.id === taskId) openDrawer(tasks.find(t => t.id === taskId));
+      } catch (e) { console.error(e); }
+    }
+    
+    async function killBot(taskId) {
+      if (!confirm('Kill this bot?')) return;
+      try {
+        await fetch(API + '/tasks/' + taskId, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({bot: null})
+        });
+        loadData();
+        if (currentTask?.id === taskId) openDrawer(tasks.find(t => t.id === taskId));
+      } catch (e) { console.error(e); }
+    }
+    
+    async function blockTask(taskId) {
+      const reason = prompt('Reason for blocking:');
+      if (!reason) return;
+      try {
+        await fetch(API + '/tasks/' + taskId, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({status: 'blocked', blockReason: reason})
+        });
+        loadData();
+        document.getElementById('drawer').classList.remove('open');
+      } catch (e) { console.error(e); }
+    }
+    
+    async function completeTask(taskId) {
+      try {
+        await fetch(API + '/tasks/' + taskId, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({status: 'completed'})
+        });
+        loadData();
+        document.getElementById('drawer').classList.remove('open');
+      } catch (e) { console.error(e); }
+    }
+    
+    async function deleteTask(taskId) {
+      if (!confirm('Delete this task?')) return;
+      try {
+        await fetch(API + '/tasks/' + taskId, {method: 'DELETE'});
+        loadData();
+        document.getElementById('drawer').classList.remove('open');
+      } catch (e) { console.error(e); }
+    }
+    
+    // Settings
+    document.getElementById('settingsBtn').onclick = () => {
+      renderSettings();
+      document.getElementById('settings').classList.add('open');
+    };
+    document.getElementById('settingsClose').onclick = () => document.getElementById('settings').classList.remove('open');
+    document.getElementById('settings').onclick = (e) => {
+      if (e.target.id === 'settings') document.getElementById('settings').classList.remove('open');
+    };
+    
+    function renderSettings() {
+      const content = document.getElementById('settingsContent');
+      content.innerHTML = `
+        <div class="settings-section">
+          <h4>Manager Mode</h4>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Enable Manager Mode</div>
+              <div class="setting-desc">Jeff operates as manager-only, never executes directly</div>
+            </div>
+            <div class="toggle ${settings.managerMode?.enabled ? 'on' : ''}" onclick="toggleSetting('managerMode.enabled', this)"></div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Auto-escalate on Failure</div>
+              <div class="setting-desc">Automatically escalate to Jeff when bot fails</div>
+            </div>
+            <div class="toggle ${settings.managerMode?.interventionRules?.autoEscalateOnFailure ? 'on' : ''}" onclick="toggleSetting('managerMode.interventionRules.autoEscalateOnFailure', this)"></div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Spawning</h4>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Max Concurrent Bots</div>
+            </div>
+            <input type="number" value="${settings.spawning?.maxConcurrentBots || 3}" style="width:60px" onchange="updateSetting('spawning.maxConcurrentBots', this.value)">
+          </div>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Default Model</div>
+            </div>
+            <select style="width:120px" onchange="updateSetting('spawning.defaultModel', this.value)">
+              <option value="light" ${settings.spawning?.defaultModel === 'light' ? 'selected' : ''}>Light</option>
+              <option value="medium" ${settings.spawning?.defaultModel === 'medium' ? 'selected' : ''}>Medium</option>
+              <option value="heavy" ${settings.spawning?.defaultModel === 'heavy' ? 'selected' : ''}>Heavy</option>
+              <option value="claude" ${settings.spawning?.defaultModel === 'claude' ? 'selected' : ''}>Claude</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Approval Gates</h4>
+          <div class="setting-row">
+            <div>
+              <div class="setting-label">Enable Approvals</div>
+              <div class="setting-desc">Require approval before certain actions</div>
+            </div>
+            <div class="toggle ${settings.approvalGates?.enabled ? 'on' : ''}" onclick="toggleSetting('approvalGates.enabled', this)"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    async function toggleSetting(path, el) {
+      el.classList.toggle('on');
+      const value = el.classList.contains('on');
+      // Would save to backend here
+    }
+    
+    async function updateSetting(path, value) {
+      // Would save to backend here
+    }
+    
+    // Add Task Modal
+    document.getElementById('addTaskBtn').onclick = () => document.getElementById('taskModal').classList.add('open');
+    document.getElementById('cancelTaskBtn').onclick = () => document.getElementById('taskModal').classList.remove('open');
+    
     document.getElementById('taskForm').onsubmit = async (e) => {
       e.preventDefault();
-      const title = document.getElementById('taskTitle').value;
-      const desc = document.getElementById('taskDesc').value;
-      const template = document.getElementById('taskTemplate').value;
+      const data = {
+        title: document.getElementById('taskTitle').value,
+        description: document.getElementById('taskDesc').value,
+        acceptanceCriteria: document.getElementById('taskCriteria').value,
+        priority: document.getElementById('taskPriority').value,
+        template: document.getElementById('taskTemplate').value,
+        status: 'todo'
+      };
       
       try {
         await fetch(API + '/tasks', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({title: title, description: desc, template: template, status: 'todo'})
+          body: JSON.stringify(data)
         });
-        modal.classList.remove('show');
+        document.getElementById('taskModal').classList.remove('open');
         document.getElementById('taskForm').reset();
         loadData();
-      } catch (e) {
-        console.error('Error:', e);
-      }
+      } catch (e) { console.error(e); }
     };
     
+    // Tab switching
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+      };
+    });
+    
+    // Initialize
     loadData();
     setInterval(loadData, 5000);
   </script>
