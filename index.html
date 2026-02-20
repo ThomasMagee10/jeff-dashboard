@@ -479,7 +479,7 @@
       if (!draggedTask) return;
       
       try {
-        await fetch(`API + '/tasks'/${draggedTask}`, {
+        await fetch(`${API}/tasks/${draggedTask}`, {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({status: newStatus})
@@ -529,7 +529,7 @@
       if (botName === null) return;
       
       try {
-        await fetch(`API + '/tasks'/${taskId}`, {
+        await fetch(`${API}/tasks/${taskId}`, {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({botName: botName || null})
@@ -545,7 +545,7 @@
       if (!confirm('Delete this task?')) return;
       
       try {
-        await fetch(`API + '/tasks'/${taskId}`, {method: 'DELETE'});
+        await fetch(`${API}/tasks/${taskId}`, {method: 'DELETE'});
         await loadData();
       } catch (e) {
         console.error('Failed to delete task:', e);
