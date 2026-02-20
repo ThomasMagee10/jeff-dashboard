@@ -374,22 +374,43 @@
   </div>
   
   <script>
+    // API Base URL - change this for remote access
+    // For local: leave empty. For remote: set to 'http://192.168.5.157:18790' or tunnel URL
+    const API_BASE = ''; // Defaults to same origin
+    
+    const API = API_BASE + '/api';
     let tasks = [];
     let templates = {};
     let draggedTask = null;
+    let apiConnected = false;
     
     // Load config and tasks
     async function loadData() {
       try {
-        const res = await fetch('/api/config');
+        const res = await fetch(API + '/config');
+        if (!res.ok) throw new Error('API not available');
+        apiConnected = true;
         const data = await res.json();
         templates = data.templates || {};
         tasks = data.tasks || [];
         renderBoard();
       } catch (e) {
         console.error('Failed to load data:', e);
+        apiConnected = false;
+        renderOffline();
       }
     }
+    
+    function renderOffline() {
+      document.querySelector('header').innerHTML = `
+        <h1>Jeff Manager <span>/ Kanban</span></h1>
+        <div style="background: #da3633; color: white; padding: 20px; border-radius: 8px;">
+          <h3>🔌 Backend Not Connected</h3>
+          <p>This dashboard requires the Jeff backend to be running.</p>
+          <p style="margin-top: 10px;"><strong>Local access:</strong> http://192.168.5.157:18790</p>
+          <p style="margin-top: 10px;"><strong>Remote access:</strong> Set API_BASE in the code to your tunnel URL</p>
+        </div>
+      `;
     
     function renderBoard() {
       const columns = {
@@ -459,7 +480,7 @@
       if (!draggedTask) return;
       
       try {
-        await fetch(`/api/tasks/${draggedTask}`, {
+        await fetch(`API + '/tasks'/${draggedTask}`, {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({status: newStatus})
@@ -491,7 +512,7 @@
       const template = document.getElementById('taskTemplate').value;
       
       try {
-        await fetch('/api/tasks', {
+        await fetch('API + '/tasks'', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({title, description, template, status: 'todo'})
@@ -509,7 +530,7 @@
       if (botName === null) return;
       
       try {
-        await fetch(`/api/tasks/${taskId}`, {
+        await fetch(`API + '/tasks'/${taskId}`, {
           method: 'PUT',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({botName: botName || null})
@@ -525,7 +546,7 @@
       if (!confirm('Delete this task?')) return;
       
       try {
-        await fetch(`/api/tasks/${taskId}`, {method: 'DELETE'});
+        await fetch(`API + '/tasks'/${taskId}`, {method: 'DELETE'});
         await loadData();
       } catch (e) {
         console.error('Failed to delete task:', e);
