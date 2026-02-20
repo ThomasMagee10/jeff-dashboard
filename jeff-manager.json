@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "global": {
+    "allowSpawning": true,
+    "autoRetry": true,
+    "maxConcurrentBots": 3,
+    "maxTokensPerHour": 100000,
+    "costAlertThreshold": 1.0,
+    "costKillThreshold": 5.0,
+    "defaultModel": "minimax-m2.1"
+  },
+  "templates": {
+    "light": {
+      "name": "Light",
+      "description": "Simple lookups and quick tasks",
+      "model": "minimax-m2.1",
+      "maxTokens": 4000,
+      "timeoutSeconds": 60,
+      "allowedTools": ["read", "web_search", "web_fetch"],
+      "systemPrompt": "You are a fast, efficient assistant. Be concise. Return results directly. No lengthy explanations."
+    },
+    "medium": {
+      "name": "Medium",
+      "description": "Research and multi-step tasks",
+      "model": "minimax-m2.1",
+      "maxTokens": 10000,
+      "timeoutSeconds": 180,
+      "allowedTools": ["read", "write", "web_search", "web_fetch", "exec"],
+      "systemPrompt": "You are a capable assistant. Research thoroughly, think step by step. Return structured results."
+    },
+    "heavy": {
+      "name": "Heavy",
+      "description": "Complex reasoning and important tasks",
+      "model": "minimax-m2.5",
+      "maxTokens": 20000,
+      "timeoutSeconds": 300,
+      "allowedTools": ["read", "write", "edit", "web_search", "web_fetch", "exec", "browser"],
+      "systemPrompt": "You are a thoughtful assistant. Think carefully, consider edge cases. When uncertain, explain your uncertainty."
+    }
+  },
+  "jobs": [],
+  "stats": {
+    "totalJobs": 0,
+    "totalTokens": 0,
+    "totalCost": 0,
+    "lastReset": "2026-02-19T00:00:00Z"
+  }
+}
