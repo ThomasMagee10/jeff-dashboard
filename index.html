@@ -511,7 +511,7 @@
       const template = document.getElementById('taskTemplate').value;
       
       try {
-        await fetch('API + '/tasks'', {
+        await fetch(`${API}/tasks`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({title, description, template, status: 'todo'})
