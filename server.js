@@ -1,16 +1,29 @@
 #!/usr/bin/env node
 
 const http = require('http');
-const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 18790;
 
 // Load data
-let data = require('./jeff-manager.json');
+const fs = require('fs');
+const path = require('path');
+
+let data = {
+  version: "1.0",
+  settings: { managerMode: { enabled: true, interventionRules: { autoEscalateOnFailure: true, requireApprovalForDestructive: true, requireApprovalForPR: true, requireApprovalForMessaging: false, budgetThreshold: 100 } }, spawning: { maxConcurrentBots: 3, defaultModel: "medium", retryPolicy: { maxRetries: 2, backoffMs: 5000 }, defaultBudgets: { light: { tokens: 4000, timeoutSeconds: 60 }, medium: { tokens: 10000, timeoutSeconds: 180 }, heavy: { tokens: 20000, timeoutSeconds: 300 }, claude: { tokens: 50000, timeoutSeconds: 600 } } }, approvalGates: { enabled: false, requireForDestructive: true, requireForPR: true, requireForMessaging: false, budgetThreshold: 100 }, integrations: { github: { enabled: false, token: "" }, jira: { enabled: false, token: "" }, telegram: { enabled: true } }, notifications: { channels: ["telegram"], events: ["task_created", "task_completed", "task_blocked", "bot_failed"] }, boardPreferences: { wipLimits: { todo: 10, progress: 5, blocked: 3 }, sorting: "createdAt", filters: { showCompleted: true } } },
+  templates: { light: { name: "Light", model: "MiniMax M2.1", maxTokens: 4000, timeoutSeconds: 60, color: "#238636" }, medium: { name: "Medium", model: "MiniMax M2.1", maxTokens: 10000, timeoutSeconds: 180, color: "#d29922" }, heavy: { name: "Heavy", model: "MiniMax M2.5", maxTokens: 20000, timeoutSeconds: 300, color: "#da3633" }, claude: { name: "Claude", model: "Claude 3.5 Sonnet", maxTokens: 50000, timeoutSeconds: 600, color: "#a371f7" } },
+  tasks: [
+    { id: "task-1", title: "Build user authentication", description: "Implement OAuth2 login flow with GitHub and Google providers.", status: "progress", priority: "high", template: "medium", createdAt: "2026-02-20T10:00:00Z", updatedAt: "2026-02-20T11:30:00Z", bot: { name: "bot-alpha", status: "running", model: "MiniMax M2.1", startedAt: "2026-02-20T11:30:00Z", lastHeartbeatAt: "2026-02-20T12:35:00Z", currentStep: "Implementing OAuth2 flow", budgetUsed: { tokens: 4500, calls: 12 }, budgetLimit: { tokens: 10000, calls: 50 } }, activity: [{ timestamp: "2026-02-20T11:30:00Z", action: "Bot spawned", details: "bot-alpha started" }, { timestamp: "2026-02-20T12:00:00Z", action: "Progress", details: "Completed user model" }, { timestamp: "2026-02-20T12:35:00Z", action: "Heartbeat", details: "Implementing OAuth2 flow" }] },
+    { id: "task-2", title: "Fix dashboard CSS", description: "Responsive issues on mobile devices.", status: "todo", priority: "low", template: "light", createdAt: "2026-02-20T12:00:00Z", updatedAt: "2026-02-20T12:00:00Z", bot: null, activity: [] },
+    { id: "task-3", title: "API rate limiting", description: "Implement rate limiting middleware.", status: "blocked", priority: "medium", template: "heavy", createdAt: "2026-02-19T14:00:00Z", updatedAt: "2026-02-20T09:00:00Z", blockReason: "Waiting on Redis", bot: { name: "bot-gamma", status: "paused", model: "MiniMax M2.5", startedAt: "2026-02-19T14:00:00Z", lastHeartbeatAt: "2026-02-20T09:00:00Z", currentStep: "Waiting for Redis", budgetUsed: { tokens: 15000, calls: 35 }, budgetLimit: { tokens: 20000, calls: 100 } }, activity: [] },
+    { id: "task-4", title: "Database migrations", description: "Create migration scripts for new schema.", status: "completed", priority: "medium", template: "light", createdAt: "2026-02-18T10:00:00Z", updatedAt: "2026-02-19T16:00:00Z", bot: { name: "bot-beta", status: "completed", model: "MiniMax M2.1", startedAt: "2026-02-19T10:00:00Z", lastHeartbeatAt: "2026-02-19T16:00:00Z", currentStep: "Migration complete", budgetUsed: { tokens: 2000, calls: 5 }, budgetLimit: { tokens: 4000, calls: 20 } }, activity: [] }
+  ],
+  stats: { totalTasks: 4, completedTasks: 1 }
+};
 
 function saveData() {
-  fs.writeFileSync('./jeff-manager.json', JSON.stringify(data, null, 2));
+  // In-memory only for now
 }
 
 function generateId() {
