@@ -1,101 +1,540 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jeff Manager Dashboard</title>
+  <title>Jeff Manager - Kanban Board</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
+    
+    :root {
+      --bg-dark: #0d1117;
+      --bg-card: #161b22;
+      --bg-column: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #238636;
+      --warning: #d29922;
+      --danger: #da3633;
+      --purple: #a371f7;
+    }
+    
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0d1117;
-      color: #e6edf3;
-      padding: 40px;
+      background: var(--bg-dark);
+      color: var(--text);
       min-height: 100vh;
-    }
-    h1 { color: #58a6ff; margin-bottom: 10px; }
-    h2 { color: #8b949e; font-size: 18px; margin-bottom: 30px; }
-    
-    .panel {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 25px;
-      margin-bottom: 20px;
-    }
-    .panel h3 { 
-      color: #e6edf3; 
-      font-size: 18px; 
-      margin-bottom: 15px; 
-    }
-    
-    .info-box {
-      background: #1f6feb;
-      border: 1px solid #388bfd;
-      border-radius: 6px;
       padding: 20px;
-      margin-bottom: 20px;
     }
-    .info-box h3 { color: white; margin-bottom: 10px; }
-    .info-box code { background: #0d1117; padding: 4px 8px; border-radius: 4px; }
     
-    .template-item {
-      background: #0d1117;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 10px;
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
     }
-    .template-name { color: #58a6ff; font-weight: bold; }
-    .template-meta { color: #8b949e; font-size: 14px; margin-top: 5px; }
     
-    .btn {
-      display: inline-block;
-      background: #238636;
+    h1 { color: var(--accent); font-size: 28px; }
+    h1 span { color: var(--text-muted); font-weight: normal; }
+    
+    .header-stats {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .stat {
+      background: var(--bg-card);
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    
+    .stat-value { font-size: 20px; font-weight: bold; }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    
+    .add-task-btn {
+      background: var(--accent);
       color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .add-task-btn:hover { opacity: 0.9; }
+    
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      min-height: 600px;
+    }
+    
+    .column {
+      background: var(--bg-column);
+      border-radius: 12px;
+      padding: 15px;
+      min-height: 500px;
+    }
+    
+    .column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .column-title {
+      font-weight: bold;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .column-todo .column-title { color: var(--accent); }
+    .column-progress .column-title { color: var(--warning); }
+    .column-blocked .column-title { color: var(--danger); }
+    .column-completed .column-title { color: var(--success); }
+    
+    .task-count {
+      background: var(--bg-dark);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    .tasks {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .task {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+      cursor: grab;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    
+    .task:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .task.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+    
+    .task-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .task-description {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    
+    .task-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .task-badge {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .task-badge.model { background: var(--bg-dark); color: var(--text-muted); }
+    .task-badge.time { background: var(--bg-dark); color: var(--text-muted); }
+    .task-badge.tokens { background: var(--bg-dark); color: var(--text-muted); }
+    .task-badge.bot { background: var(--purple); color: white; }
+    
+    .task-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .task-btn {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .task-btn:hover { color: var(--text); }
+    .task-btn.delete:hover { color: var(--danger); }
+    
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-overlay.active { display: flex; }
+    
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 30px;
+      width: 500px;
+      max-width: 90%;
+    }
+    
+    .modal h2 { margin-bottom: 20px; }
+    
+    .form-group { margin-bottom: 15px; }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+    
+    .btn-cancel {
+      background: var(--bg-dark);
+      color: var(--text);
+      border: 1px solid var(--border);
       padding: 10px 20px;
       border-radius: 6px;
-      text-decoration: none;
+      cursor: pointer;
+    }
+    
+    .btn-submit {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
       font-weight: bold;
-      margin-top: 10px;
+    }
+    
+    .empty-column {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 20px;
+      font-size: 14px;
+    }
+    
+    @media (max-width: 1200px) {
+      .kanban { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+      .kanban { grid-template-columns: 1fr; }
+      header { flex-direction: column; gap: 20px; }
     }
   </style>
 </head>
 <body>
-  <h1>⚡ Jeff Manager</h1>
-  <h2>Multi-Bot Orchestration Dashboard</h2>
+  <header>
+    <h1>Jeff Manager <span>/ Kanban</span></h1>
+    <div class="header-stats">
+      <div class="stat">
+        <div class="stat-value" id="totalTasks">0</div>
+        <div class="stat-label">Total Tasks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="completedTasks">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+    <button class="add-task-btn" onclick="openModal()">+ Add Task</button>
+  </header>
   
-  <div class="info-box">
-    <h3>🔌 Connect to Jeff</h3>
-    <p>This dashboard requires a connection to the Jeff backend running on the Mac mini.</p>
-    <p style="margin-top: 15px;">Access locally: <code>http://192.168.5.157:18790</code></p>
-    <p style="margin-top: 10px; font-size: 14px; color: #8b949e;">(Must be on the same network as the Mac mini)</p>
-  </div>
-  
-  <div class="panel">
-    <h3>📋 Bot Templates</h3>
-    
-    <div class="template-item">
-      <div class="template-name">⚡ Light</div>
-      <div class="template-meta">MiniMax M2.1 • 4,000 tokens • 60s timeout</div>
+  <div class="kanban">
+    <div class="column column-todo" ondragover="allowDrop(event)" ondrop="drop(event, 'todo')">
+      <div class="column-header">
+        <span class="column-title">To Do</span>
+        <span class="task-count" id="todo-count">0</span>
+      </div>
+      <div class="tasks" id="tasks-todo"></div>
     </div>
     
-    <div class="template-item">
-      <div class="template-name">💪 Medium</div>
-      <div class="template-meta">MiniMax M2.1 • 10,000 tokens • 180s timeout</div>
+    <div class="column column-progress" ondragover="allowDrop(event)" ondrop="drop(event, 'progress')">
+      <div class="column-header">
+        <span class="column-title">In Progress</span>
+        <span class="task-count" id="progress-count">0</span>
+      </div>
+      <div class="tasks" id="tasks-progress"></div>
     </div>
     
-    <div class="template-item">
-      <div class="template-name">🧠 Heavy</div>
-      <div class="template-meta">MiniMax M2.5 • 20,000 tokens • 300s timeout</div>
+    <div class="column column-blocked" ondragover="allowDrop(event)" ondrop="drop(event, 'blocked')">
+      <div class="column-header">
+        <span class="column-title">Blocked</span>
+        <span class="task-count" id="blocked-count">0</span>
+      </div>
+      <div class="tasks" id="tasks-blocked"></div>
+    </div>
+    
+    <div class="column column-completed" ondragover="allowDrop(event)" ondrop="drop(event, 'completed')">
+      <div class="column-header">
+        <span class="column-title">Completed</span>
+        <span class="task-count" id="completed-count">0</span>
+      </div>
+      <div class="tasks" id="tasks-completed"></div>
     </div>
   </div>
   
-  <div class="panel">
-    <h3>⚙️ System Info</h3>
-    <p style="color: #8b949e; margin-bottom: 8px;">Gateway: OpenClaw 2026.2.17</p>
-    <p style="color: #8b949e; margin-bottom: 8px;">Model: Claude Sonnet (via Pro subscription)</p>
-    <p style="color: #8b949e;">Channels: Telegram, Web</p>
+  <!-- Add Task Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2>Add New Task</h2>
+      <form id="taskForm">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="taskTitle" required placeholder="Task title">
+        </div>
+        
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="taskDescription" placeholder="Task details..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Template / Bot Type</label>
+          <select id="taskTemplate">
+            <option value="light">⚡ Light (4k tokens, 60s)</option>
+            <option value="medium" selected>💪 Medium (10k tokens, 180s)</option>
+            <option value="heavy">🧠 Heavy (20k tokens, 300s)</option>
+            <option value="claude">🤖 Claude (50k tokens, 600s)</option>
+          </select>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn-submit">Create Task</button>
+        </div>
+      </form>
+    </div>
   </div>
+  
+  <script>
+    let tasks = [];
+    let templates = {};
+    let draggedTask = null;
+    
+    // Load config and tasks
+    async function loadData() {
+      try {
+        const res = await fetch('/api/config');
+        const data = await res.json();
+        templates = data.templates || {};
+        tasks = data.tasks || [];
+        renderBoard();
+      } catch (e) {
+        console.error('Failed to load data:', e);
+      }
+    }
+    
+    function renderBoard() {
+      const columns = {
+        todo: document.getElementById('tasks-todo'),
+        progress: document.getElementById('tasks-progress'),
+        blocked: document.getElementById('tasks-blocked'),
+        completed: document.getElementById('tasks-completed')
+      };
+      
+      const counts = { todo: 0, progress: 0, blocked: 0, completed: 0 };
+      
+      // Clear columns
+      Object.values(columns).forEach(col => col.innerHTML = '');
+      
+      tasks.forEach(task => {
+        const status = task.status || 'todo';
+        counts[status]++;
+        
+        const el = document.createElement('div');
+        el.className = 'task';
+        el.draggable = true;
+        el.ondragstart = (e) => drag(e, task.id);
+        
+        const template = templates[task.template] || {};
+        
+        el.innerHTML = `
+          <div class="task-title">${task.title}</div>
+          ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+          <div class="task-meta">
+            <span class="task-badge model">${template.model || 'No model'}</span>
+            <span class="task-badge time">⏱ ${template.timeoutSeconds || 0}s</span>
+            <span class="task-badge tokens">💰 ${template.maxTokens || 0}</span>
+            ${task.botName ? `<span class="task-badge bot">🤖 ${task.botName}</span>` : ''}
+          </div>
+          <div class="task-actions">
+            ${status !== 'completed' ? `<button class="task-btn" onclick="assignBot('${task.id}')">🤖 Assign</button>` : ''}
+            <button class="task-btn delete" onclick="deleteTask('${task.id}')">Delete</button>
+          </div>
+        `;
+        
+        if (columns[status]) {
+          columns[status].appendChild(el);
+        }
+      });
+      
+      // Update counts
+      document.getElementById('todo-count').textContent = counts.todo;
+      document.getElementById('progress-count').textContent = counts.progress;
+      document.getElementById('blocked-count').textContent = counts.blocked;
+      document.getElementById('completed-count').textContent = counts.completed;
+      document.getElementById('totalTasks').textContent = tasks.length;
+      document.getElementById('completedTasks').textContent = counts.completed;
+    }
+    
+    // Drag and drop
+    function allowDrop(e) {
+      e.preventDefault();
+    }
+    
+    function drag(e, taskId) {
+      draggedTask = taskId;
+      e.target.classList.add('dragging');
+    }
+    
+    async function drop(e, newStatus) {
+      e.preventDefault();
+      if (!draggedTask) return;
+      
+      try {
+        await fetch(`/api/tasks/${draggedTask}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({status: newStatus})
+        });
+        await loadData();
+      } catch (e) {
+        console.error('Failed to update task:', e);
+      }
+      
+      draggedTask = null;
+    }
+    
+    // Modal
+    function openModal() {
+      document.getElementById('modal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+      document.getElementById('taskForm').reset();
+    }
+    
+    // Create task
+    document.getElementById('taskForm').onsubmit = async (e) => {
+      e.preventDefault();
+      
+      const title = document.getElementById('taskTitle').value;
+      const description = document.getElementById('taskDescription').value;
+      const template = document.getElementById('taskTemplate').value;
+      
+      try {
+        await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title, description, template, status: 'todo'})
+        });
+        closeModal();
+        await loadData();
+      } catch (e) {
+        console.error('Failed to create task:', e);
+      }
+    };
+    
+    // Assign bot
+    async function assignBot(taskId) {
+      const botName = prompt('Enter bot name (or leave empty to unassign):');
+      if (botName === null) return;
+      
+      try {
+        await fetch(`/api/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({botName: botName || null})
+        });
+        await loadData();
+      } catch (e) {
+        console.error('Failed to assign bot:', e);
+      }
+    }
+    
+    // Delete task
+    async function deleteTask(taskId) {
+      if (!confirm('Delete this task?')) return;
+      
+      try {
+        await fetch(`/api/tasks/${taskId}`, {method: 'DELETE'});
+        await loadData();
+      } catch (e) {
+        console.error('Failed to delete task:', e);
+      }
+    }
+    
+    // Initialize
+    loadData();
+    setInterval(loadData, 10000); // Refresh every 10s
+  </script>
 </body>
 </html>
