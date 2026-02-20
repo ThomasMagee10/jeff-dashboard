@@ -4,21 +4,19 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 18790;
-const HOST = '0.0.0.0';
-const CONFIG_PATH = '/Users/jeff2/.openclaw/workspace/jeff-manager.json';
+const PORT = process.env.PORT || 18790;
 
-function loadConfig() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-  } catch (e) {
-    return { templates: {}, tasks: [], stats: {} };
-  }
-}
-
-function saveConfig(cfg) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
-}
+// In-memory storage (works on Render)
+let data = {
+  templates: {
+    light: { name: "Light", description: "Quick tasks", model: "MiniMax M2.1", maxTokens: 4000, timeoutSeconds: 60, color: "#238636" },
+    medium: { name: "Medium", description: "Research & multi-step", model: "MiniMax M2.1", maxTokens: 10000, timeoutSeconds: 180, color: "#d29922" },
+    heavy: { name: "Heavy", description: "Complex reasoning", model: "MiniMax M2.5", maxTokens: 20000, timeoutSeconds: 300, color: "#da3633" },
+    claude: { name: "Claude", description: "Premium AI assistant", model: "Claude 3.5 Sonnet", maxTokens: 50000, timeoutSeconds: 600, color: "#a371f7" }
+  },
+  tasks: [],
+  stats: { totalTasks: 0, completedTasks: 0 }
+};
 
 function generateId() {
   return 'task-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
@@ -37,16 +35,14 @@ const server = http.createServer((req, res) => {
   
   // API Routes
   if (req.url === '/api/config') {
-    const cfg = loadConfig();
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(cfg));
+    res.end(JSON.stringify(data));
     return;
   }
   
   if (req.url === '/api/tasks' && req.method === 'GET') {
-    const cfg = loadConfig();
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify(cfg.tasks));
+    res.end(JSON.stringify(data.tasks));
     return;
   }
   
@@ -54,25 +50,20 @@ const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
-      const data = JSON.parse(body);
-      const cfg = loadConfig();
-      
+      const taskData = JSON.parse(body);
       const task = {
         id: generateId(),
-        title: data.title || 'Untitled Task',
-        description: data.description || '',
-        status: data.status || 'todo',
-        template: data.template || 'medium',
-        botName: data.botName || null,
+        title: taskData.title || 'Untitled Task',
+        description: taskData.description || '',
+        status: taskData.status || 'todo',
+        template: taskData.template || 'medium',
+        botName: taskData.botName || null,
         assignedAt: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
-      cfg.tasks.unshift(task);
-      cfg.stats.totalTasks = (cfg.stats.totalTasks || 0) + 1;
-      saveConfig(cfg);
-      
+      data.tasks.unshift(task);
+      data.stats.totalTasks = (data.stats.totalTasks || 0) + 1;
       res.writeHead(200, {'Content-Type': 'application/json'});
       res.end(JSON.stringify(task));
     });
@@ -85,24 +76,14 @@ const server = http.createServer((req, res) => {
     req.on('data', chunk => body += chunk);
     req.on('end', () => {
       const updates = JSON.parse(body);
-      const cfg = loadConfig();
-      const taskIndex = cfg.tasks.findIndex(t => t.id === taskId);
-      
+      const taskIndex = data.tasks.findIndex(t => t.id === taskId);
       if (taskIndex !== -1) {
-        cfg.tasks[taskIndex] = {
-          ...cfg.tasks[taskIndex],
-          ...updates,
-          updatedAt: new Date().toISOString()
-        };
-        
-        // Track completion
-        if (updates.status === 'completed' && cfg.tasks[taskIndex].status !== 'completed') {
-          cfg.stats.completedTasks = (cfg.stats.completedTasks || 0) + 1;
+        data.tasks[taskIndex] = { ...data.tasks[taskIndex], ...updates, updatedAt: new Date().toISOString() };
+        if (updates.status === 'completed' && data.tasks[taskIndex].status !== 'completed') {
+          data.stats.completedTasks = (data.stats.completedTasks || 0) + 1;
         }
-        
-        saveConfig(cfg);
         res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify(cfg.tasks[taskIndex]));
+        res.end(JSON.stringify(data.tasks[taskIndex]));
       } else {
         res.writeHead(404, {'Content-Type': 'application/json'});
         res.end(JSON.stringify({error: 'Task not found'}));
@@ -113,12 +94,9 @@ const server = http.createServer((req, res) => {
   
   if (req.url.startsWith('/api/tasks/') && req.method === 'DELETE') {
     const taskId = req.url.split('/').slice(-1)[0];
-    const cfg = loadConfig();
-    const taskIndex = cfg.tasks.findIndex(t => t.id === taskId);
-    
+    const taskIndex = data.tasks.findIndex(t => t.id === taskId);
     if (taskIndex !== -1) {
-      cfg.tasks.splice(taskIndex, 1);
-      saveConfig(cfg);
+      data.tasks.splice(taskIndex, 1);
       res.writeHead(200, {'Content-Type': 'application/json'});
       res.end(JSON.stringify({success: true}));
     } else {
@@ -128,19 +106,23 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  // Serve static dashboard
-  const dashboardPath = '/Users/jeff2/.openclaw/workspace/jeff-dashboard/index.html';
-  fs.readFile(dashboardPath, (err, data) => {
+  // Serve static files
+  let filePath = req.url === '/' ? '/index.html' : req.url;
+  const fullPath = path.join(__dirname, filePath);
+  const ext = path.extname(fullPath);
+  const contentTypes = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
+  
+  fs.readFile(fullPath, (err, content) => {
     if (err) {
-      res.writeHead(500);
-      res.end('Dashboard not found');
+      res.writeHead(404);
+      res.end('Not Found');
       return;
     }
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    res.end(data);
+    res.writeHead(200, {'Content-Type': contentTypes[ext] || 'text/plain'});
+    res.end(content);
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`Jeff Manager Dashboard: http://127.0.0.1:${PORT}/`);
+server.listen(PORT, () => {
+  console.log(`Jeff Manager running on port ${PORT}`);
 });

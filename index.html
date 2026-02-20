@@ -374,9 +374,8 @@
   </div>
   
   <script>
-    // API Base URL - change this for remote access
-    // For local: leave empty. For remote: set to 'http://192.168.5.157:18790' or tunnel URL
-    const API_BASE = ''; // Defaults to same origin
+    // API Base URL - leave empty to use same origin (serves both frontend and backend)
+    const API_BASE = '';
     
     const API = API_BASE + '/api';
     let tasks = [];
